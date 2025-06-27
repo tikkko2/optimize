@@ -138,7 +138,7 @@ def loss_function(params, u0, uT, dt, dx, dy, n, m, t_max):
 
 # Test Optimization
 def test_optimization():
-    n, m = 9, 9
+    n, m = 20, 20
     dx, dy = 0.2, 0.2
     dt = 0.05
     t_max = 0.1
