@@ -213,7 +213,7 @@ def test_optimization():
     dx, dy = 0.2, 0.2
     dt = 0.001
     t_max = 0.1
-    video_path = "input_video.mp4"  # Replace with your video path
+    video_path = "cone.mp4"  # Replace with your video path
     
     # Load video frames and optical flow
     u0, uT, a_base, b_base = load_video_frames_and_flow(video_path, n, m)
