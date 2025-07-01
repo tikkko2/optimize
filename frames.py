@@ -147,9 +147,9 @@ def load_video_frames_and_extract_flow(video_path, target_width=None, target_hei
     
     # Set target dimensions
     if target_width is None:
-        target_width = original_width // 8
+        target_width = original_width // 16
     if target_height is None:
-        target_height = original_height // 8
+        target_height = original_height // 16
     
     n, m = target_height, target_width  # n=height, m=width
     print(f"Target processing size: {m}x{n} (width x height)")
