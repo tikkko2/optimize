@@ -119,7 +119,7 @@ def solve_governing_equation(u0, a_base, b_base, c_base, dt, dx, dy, n, m, t_max
     return u                         # Return final solution
 
 # Enhanced video frame loading and optical flow computation
-def load_video_frames_and_extract_flow(video_path, target_width=None, target_height=None, frame_idx=0, downsample_factor=1):
+def load_video_frames_and_extract_flow(video_path, target_width=None, target_height=None, frame_idx=0, downsample_factor=10):
     """
     Load two consecutive frames from a video and compute optical flow
     Enhanced version with better resolution handling and optical flow processing
