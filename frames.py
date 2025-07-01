@@ -119,7 +119,7 @@ def solve_governing_equation(u0, a_base, b_base, c_base, dt, dx, dy, n, m, t_max
     return u                         # Return final solution
 
 # Enhanced video frame loading and optical flow computation
-def load_video_frames_and_extract_flow(video_path, target_width=None, target_height=None, frame_idx=0, downsample_factor=10):
+def load_video_frames_and_extract_flow(video_path, target_width=None, target_height=None, frame_idx=0, downsample_factor=8):
     """
     Load two consecutive frames from a video and compute optical flow
     Enhanced version with better resolution handling and optical flow processing
@@ -301,7 +301,7 @@ def loss_function(params, u0, uT, dt, dx, dy, n, m, t_max, regularization=1e-6):
 
 # Main optimization function
 def optimize_pde_parameters(video_path, frame_idx=0, target_width=None, target_height=None, 
-                           downsample_factor=10, dt=0.001, t_max=0.1, max_iterations=50):
+                           downsample_factor=8, dt=0.001, t_max=0.1, max_iterations=50):
     """
     Main function to optimize PDE parameters using video frames and optical flow
     
