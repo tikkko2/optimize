@@ -301,7 +301,7 @@ def loss_function(params, u0, uT, dt, dx, dy, n, m, t_max, regularization=1e-6):
 
 # Main optimization function
 def optimize_pde_parameters(video_path, frame_idx=0, target_width=None, target_height=None, 
-                           downsample_factor=8, dt=0.001, t_max=0.1, max_iterations=50):
+                           downsample_factor=8, dt=0.01, t_max=0.1, max_iterations=50):
     """
     Main function to optimize PDE parameters using video frames and optical flow
     
@@ -442,7 +442,7 @@ def test_synthetic_case():
     # Create synthetic data
     n, m = 20, 20
     dx, dy = 1.0 / m, 1.0 / n
-    dt, t_max = 0.001, 0.05
+    dt, t_max = 0.01, 0.05
     
     # Create initial condition (Gaussian blob)
     x = cp.linspace(0, 1, m)
