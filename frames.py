@@ -382,7 +382,7 @@ def optimize_pde_parameters(video_path, frame_idx=0, target_width=None, target_h
     return result, (u0, uT, cp.array(a_opt), cp.array(b_opt), cp.array(c_opt), n, m)
 
 # Test function with real video
-def test_with_video(video_path="handvid.mp4"):
+def test_with_video(video_path="cone.mp4"):
     """
     Test the complete system with a real video file
     """
@@ -487,7 +487,7 @@ if __name__ == "__main__":
         print("Warning: CUDA not available, performance will be slower")
     
     # Test with video or synthetic data
-    video_file = "handvid.mp4"  # Change this to your video file path
+    video_file = "cone.mp4"  # Change this to your video file path
     
     if os.path.exists(video_file):
         print(f"Testing with video file: {video_file}")
