@@ -96,7 +96,8 @@ def solve_governing_equation(u0, a_base, b_base, c_base, dt, dx, dy, n, m, t_max
             lower = -dt/dx * ap[1:-1,j]                              # Lower diagonal
             diag = 1 + dt/dx * (ap[1:-1,j] - am[1:-1,j])            # Main diagonal
             upper = dt/dx * am[1:-1,j]                               # Upper diagonal
-            rhs = u[1:-1,j] + dt * c_k[1:-1,j] * (1 - u[1:-1,j])   # Right-hand side
+            # rhs = u[1:-1,j] + dt * c_k[1:-1,j] * (1 - u[1:-1,j])   # Right-hand side
+            rhs = u[1:-1,j] + dt * c_k[1:-1,j] * u[1:-1,j]  # Right-hand side
             
             # Solve the system for this column
             u_x[1:-1,j] = thomas_algorithm(lower, diag, upper, rhs)
@@ -219,21 +220,21 @@ def load_video_frames_and_extract_flow(video_path, target_width=None, target_hei
     vx_max = max(abs(vx.min()), abs(vx.max()))
     vy_max = max(abs(vy.min()), abs(vy.max()))
     
-    if vx_max > 1e-6:  # Avoid division by very small numbers
-        vx_normalized = vx / vx_max * 0.1  # Scale to reasonable range
-    else:
-        vx_normalized = np.zeros_like(vx)
-        print("Warning: No significant horizontal motion detected")
+    # if vx_max > 1e-6:  # Avoid division by very small numbers
+    #     vx_normalized = vx / vx_max * 0.1  # Scale to reasonable range
+    # else:
+    #     vx_normalized = np.zeros_like(vx)
+    #     print("Warning: No significant horizontal motion detected")
         
-    if vy_max > 1e-6:  # Avoid division by very small numbers
-        vy_normalized = vy / vy_max * 0.1  # Scale to reasonable range
-    else:
-        vy_normalized = np.zeros_like(vy)
-        print("Warning: No significant vertical motion detected")
+    # if vy_max > 1e-6:  # Avoid division by very small numbers
+    #     vy_normalized = vy / vy_max * 0.1  # Scale to reasonable range
+    # else:
+    #     vy_normalized = np.zeros_like(vy)
+    #     print("Warning: No significant vertical motion detected")
     
     # Convert optical flow to coefficient arrays (a and b are optical flow vectors)
-    a_base = cp.array(vx_normalized)      # Horizontal optical flow as 'a' coefficient
-    b_base = cp.array(vy_normalized)      # Vertical optical flow as 'b' coefficient
+    a_base = vx # cp.array(vx_normalized)       Horizontal optical flow as 'a' coefficient
+    b_base = vy # cp.array(vy_normalized)       Vertical optical flow as 'b' coefficient
     
     print(f"Optical flow range - vx: [{vx.min():.3f}, {vx.max():.3f}], vy: [{vy.min():.3f}, {vy.max():.3f}]")
     print(f"Normalized flow range - a: [{cp.asnumpy(a_base).min():.3f}, {cp.asnumpy(a_base).max():.3f}], " +
@@ -242,7 +243,7 @@ def load_video_frames_and_extract_flow(video_path, target_width=None, target_hei
     return u0, uT, a_base, b_base, n, m
 
 # Initialize parameters with better initial guess
-def initialize_parameters(n, m, a_base, b_base, c_init_value=0.1):
+def initialize_parameters(n, m, a_base, b_base, c_init_value=0.0):
     """
     Initialize parameters for optimization with reasonable initial guess
     
@@ -300,7 +301,7 @@ def loss_function(params, u0, uT, dt, dx, dy, n, m, t_max, regularization=1e-6):
 
 # Main optimization function
 def optimize_pde_parameters(video_path, frame_idx=0, target_width=None, target_height=None, 
-                           downsample_factor=4, dt=0.001, t_max=0.1, max_iterations=50):
+                           downsample_factor=10, dt=0.001, t_max=0.1, max_iterations=50):
     """
     Main function to optimize PDE parameters using video frames and optical flow
     
@@ -334,11 +335,14 @@ def optimize_pde_parameters(video_path, frame_idx=0, target_width=None, target_h
     
     # Initialize parameters with optical flow as initial guess
     initial_params = initialize_parameters(n, m, a_base, b_base)
-    
+
+    vx_max = max(abs(a_base.min()), abs(a_base.max()))
+    vy_max = max(abs(b_base.min()), abs(b_base.max()))
+
     # Set up optimization bounds (reasonable ranges for each parameter type)
-    bounds_a = [(-0.5, 0.5)] * (n * m)  # Bounds for 'a' coefficients (horizontal flow)
-    bounds_b = [(-0.5, 0.5)] * (n * m)  # Bounds for 'b' coefficients (vertical flow)  
-    bounds_c = [(0, 1)] * (n * m)       # Bounds for 'c' coefficients (reaction term)
+    bounds_a = [(-vx_max - 1, vx_max + 1)] * (n * m)  # Bounds for 'a' coefficients (horizontal flow)
+    bounds_b = [(-vy_max - 1, vy_max + 1)] * (n * m)  # Bounds for 'b' coefficients (vertical flow)  
+    bounds_c = [(-1, 1)] * (n * m)       # Bounds for 'c' coefficients (reaction term)
     bounds = bounds_a + bounds_b + bounds_c
     
     print(f"Starting optimization with {len(initial_params)} parameters...")
@@ -404,7 +408,7 @@ def test_with_video(video_path="handvid.mp4"):
         print("Optimization completed, verifying results...")
         
         # Test the optimized solution
-        dt, t_max = 0.001, 0.1
+        dt, t_max = 0.01, 0.1
         dx, dy = 1.0 / m, 1.0 / n
         
         u_final = solve_governing_equation(u0, a_opt, b_opt, c_opt, dt, dx, dy, n, m, t_max)
