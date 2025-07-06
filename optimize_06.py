@@ -1,6 +1,7 @@
 import cupy as cp
 import numpy as np
 from scipy.optimize import minimize
+import time
 
 # Thomas Algorithm for tridiagonal system (GPU version)
 def thomas_algorithm(a, b, c, d):
@@ -72,8 +73,8 @@ def init_time_dependent_coeffs(a_base, b_base, c_base, t, t_max):
     
     return a, b, c
 
-# Governing equation solver using Lie splitting (GPU version)
-def solve_governing_equation(u0, a_base, b_base, c_base, dt, dx, dy, n, m, t_max):
+# Governing equation solver using Lie splitting (GPU version) with progress tracking
+def solve_governing_equation(u0, a_base, b_base, c_base, dt, dx, dy, n, m, t_max, show_progress=False):
     u = u0.copy()
     nt = int(t_max / dt)
     t = cp.linspace(0, t_max, nt)
@@ -81,7 +82,23 @@ def solve_governing_equation(u0, a_base, b_base, c_base, dt, dx, dy, n, m, t_max
     # Initialize time-dependent coefficients
     a, b, c = init_time_dependent_coeffs(a_base, b_base, c_base, t, t_max)
     
+    # Progress tracking
+    progress_interval = max(1, nt // 10)  # Show progress every 10% of iterations
+    start_time = time.time()
+    
+    if show_progress:
+        print(f"Starting time evolution with {nt} time steps...")
+        print("Progress: [", end="", flush=True)
+    
     for k in range(nt):
+        # Show progress
+        if show_progress and (k % progress_interval == 0 or k == nt - 1):
+            elapsed_time = time.time() - start_time
+            progress_percent = (k + 1) / nt * 100
+            print("=" if k < nt - 1 else "=", end="", flush=True)
+            if k == nt - 1:
+                print(f"] 100.0% Complete in {elapsed_time:.2f}s")
+        
         # Use coefficients at time t[k]
         a_k = a[:, :, k]
         b_k = b[:, :, k]
@@ -132,7 +149,7 @@ def test_governing_equation():
     
     u0[0,:], u0[-1,:], u0[:,0], u0[:,-1] = uT[0,:], uT[-1,:], uT[:,0], uT[:,-1]
     
-    u = solve_governing_equation(u0, a_base, b_base, c_base, dt, dx, dy, n, m, t_max)
+    u = solve_governing_equation(u0, a_base, b_base, c_base, dt, dx, dy, n, m, t_max, show_progress=True)
     
     u_np = cp.asnumpy(u)
     uT_np = cp.asnumpy(uT)
@@ -148,14 +165,33 @@ def test_governing_equation():
     
     return cp.all(cp.logical_and(u >= 0, u <= 1)).get()
 
-# Loss function
-def loss_function(params, u0, uT, dt, dx, dy, n, m, t_max):
+# Global variables for optimization progress tracking
+optimization_iteration = 0
+optimization_start_time = 0
+
+# Callback function for optimization progress
+def optimization_callback(xk):
+    global optimization_iteration, optimization_start_time
+    optimization_iteration += 1
+    
+    if optimization_iteration == 1:
+        optimization_start_time = time.time()
+    
+    elapsed_time = time.time() - optimization_start_time
+    print(f"Iteration {optimization_iteration:3d} | Elapsed: {elapsed_time:6.1f}s | Current params norm: {np.linalg.norm(xk):.6f}")
+    
+    # Force flush to ensure immediate output
+    import sys
+    sys.stdout.flush()
+
+# Loss function with optional progress tracking
+def loss_function(params, u0, uT, dt, dx, dy, n, m, t_max, show_time_progress=False):
     size = n * m
     a_base = cp.array(params[:size]).reshape(n, m)
     b_base = cp.array(params[size:2*size]).reshape(n, m)
     c_base = cp.array(params[2*size:]).reshape(n, m)
     
-    u = solve_governing_equation(u0, a_base, b_base, c_base, dt, dx, dy, n, m, t_max)
+    u = solve_governing_equation(u0, a_base, b_base, c_base, dt, dx, dy, n, m, t_max, show_progress=show_time_progress)
     loss = cp.sum((u - uT) ** 2).get()
     return loss
 
@@ -166,8 +202,11 @@ def init_u0(x, y):
 def init_uT(x, y):
     return 0.5 * (1 + cp.cos(np.pi * x) * cp.sin(np.pi * y))
 
-# Test Optimization with time-dependent coefficients
+# Test Optimization with time-dependent coefficients and progress tracking
 def test_optimization():
+    global optimization_iteration
+    optimization_iteration = 0  # Reset counter
+    
     n, m = 7, 7
     dx, dy = 0.2, 0.2
     dt = 0.1
@@ -200,38 +239,50 @@ def test_optimization():
     # Initial guess on CPU for scipy
     initial_params_np = np.ones(3 * n * m) * 0.05
     
-    # Optimization with bounds and relaxed tolerances
+    print(f"\nStarting optimization with {3 * n * m} parameters...")
+    print("Optimization Progress:")
+    print("-" * 60)
+    
+    # Optimization with bounds, relaxed tolerances, and progress callback
     bounds = [(0, 1)] * (3 * n * m)
     result = minimize(
         loss_function,
         initial_params_np,
-        args=(u0, uT, dt, dx, dy, n, m, t_max),
+        args=(u0, uT, dt, dx, dy, n, m, t_max, False),  # Don't show time progress for each iteration
         method='L-BFGS-B',
         bounds=bounds,
+        callback=optimization_callback,
         options={'maxiter': 100, 'ftol': 1e-10, 'gtol': 1e-8, 'disp': True}
     )
     
-    print("\nOptimization Test:")
+    print("-" * 60)
+    print("\nOptimization Test Results:")
     print("Optimization success:", result.success)
     print("Optimization message:", result.message)
     print("Final loss:", result.fun)
     print("Number of iterations:", result.nit)
+    print("Total function evaluations:", result.nfev)
     
     return result.success or result.fun < 1e-8
 
 # Run all tests
 def run_tests():
     print("Running Tests (GPU version, time-dependent coefficients)...")
-    #thomas_passed = test_thomas_algorithm()
+    print("=" * 80)
+    
+    # Uncomment to test Thomas algorithm
+    # thomas_passed = test_thomas_algorithm()
+    
     gov_eq_passed = test_governing_equation()
     opt_passed = test_optimization()
     
-    print("\nTest Summary:")
-    #print("Thomas Algorithm:", "PASSED" if thomas_passed else "FAILED")
+    print("\n" + "=" * 80)
+    print("Test Summary:")
+    # print("Thomas Algorithm:", "PASSED" if thomas_passed else "FAILED")
     print("Governing Equation:", "PASSED" if gov_eq_passed else "FAILED")
     print("Optimization:", "PASSED" if opt_passed else "FAILED")
     
-    #return thomas_passed and gov_eq_passed and opt_passed
+    # return thomas_passed and gov_eq_passed and opt_passed
     return gov_eq_passed and opt_passed
 
 if __name__ == "__main__":
