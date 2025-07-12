@@ -577,192 +577,195 @@ class OpticalFlowSolver:
         return I_computed
     
     def plot_results(self, I_initial, I_final, I_computed):
-            """Plot results showing convection and source steps"""
-            print("\nStep 7: Plotting results...")
+        """Plot results showing convection and source steps"""
+        print("\nStep 7: Plotting results...")
+        
+        if len(I_initial.shape) == 3:
+            # Color image plotting with convection intermediate step
+            fig, axes = plt.subplots(4, 5, figsize=(20, 16))
             
-            if len(I_initial.shape) == 3:
-                # Color image plotting with convection intermediate step
-                fig, axes = plt.subplots(4, 5, figsize=(20, 16))
-                
-                # Main images (first row)
-                axes[0, 0].imshow(I_initial)
-                axes[0, 0].set_title('I_initial')
-                axes[0, 0].axis('off')
-                
-                axes[0, 1].imshow(I_final)
-                axes[0, 1].set_title('I_final')
-                axes[0, 1].axis('off')
-                
-                # Show convection result at T/2
-                I_conv_half = np.stack([
-                    self.channel_results['r']['convection_half'],
-                    self.channel_results['g']['convection_half'],
-                    self.channel_results['b']['convection_half']
-                ], axis=2)
-                axes[0, 2].imshow(I_conv_half)
-                axes[0, 2].set_title('I_convection(T/2)')
-                axes[0, 2].axis('off')
-                
-                axes[0, 3].imshow(I_computed)
-                axes[0, 3].set_title('I_computed')
-                axes[0, 3].axis('off')
-                
-                error = np.abs(I_final - I_computed)
-                axes[0, 4].imshow(error)
-                axes[0, 4].set_title('|I_final - I_computed|')
-                axes[0, 4].axis('off')
-                
-                # Channel-wise plots
-                channels = ['r', 'g', 'b']
-                channel_names = ['Red', 'Green', 'Blue']
-                
-                for i, (ch, name) in enumerate(zip(channels, channel_names)):
-                    row = i + 1
-                    ch_data = self.channel_results[ch]
-                    
-                    # Initial
-                    axes[row, 0].imshow(ch_data['initial'], cmap='gray', vmin=0, vmax=1)
-                    axes[row, 0].set_title(f'{name} Initial')
-                    axes[row, 0].axis('off')
-                    
-                    # Final
-                    axes[row, 1].imshow(ch_data['final'], cmap='gray', vmin=0, vmax=1)
-                    axes[row, 1].set_title(f'{name} Final')
-                    axes[row, 1].axis('off')
-                    
-                    # Convection at T/2
-                    axes[row, 2].imshow(ch_data['convection_half'], cmap='gray', vmin=0, vmax=1)
-                    axes[row, 2].set_title(f'{name} Convection(T/2)')
-                    axes[row, 2].axis('off')
-                    
-                    # Computed
-                    axes[row, 3].imshow(ch_data['computed'], cmap='gray', vmin=0, vmax=1)
-                    axes[row, 3].set_title(f'{name} Computed')
-                    axes[row, 3].axis('off')
-                    
-                    # Error
-                    ch_error = np.abs(ch_data['final'] - ch_data['computed'])
-                    im = axes[row, 4].imshow(ch_error, cmap='hot')
-                    axes[row, 4].set_title(f'{name} Error')
-                    axes[row, 4].axis('off')
-                    plt.colorbar(im, ax=axes[row, 4])
+            # Main images (first row)
+            axes[0, 0].imshow(I_initial)
+            axes[0, 0].set_title('I_initial')
+            axes[0, 0].axis('off')
             
-            else:
-                # Grayscale image plotting
-                fig, axes = plt.subplots(1, 5, figsize=(20, 4))
-                
-                ch_data = self.channel_results['gray']
-                
-                axes[0].imshow(ch_data['initial'], cmap='gray', vmin=0, vmax=1)
-                axes[0].set_title('I_initial')
-                axes[0].axis('off')
-                
-                axes[1].imshow(ch_data['final'], cmap='gray', vmin=0, vmax=1)
-                axes[1].set_title('I_final')
-                axes[1].axis('off')
-                
-                axes[2].imshow(ch_data['convection_half'], cmap='gray', vmin=0, vmax=1)
-                axes[2].set_title('I_convection(T/2)')
-                axes[2].axis('off')
-                
-                axes[3].imshow(ch_data['computed'], cmap='gray', vmin=0, vmax=1)
-                axes[3].set_title('I_computed')
-                axes[3].axis('off')
-                
-                error = np.abs(ch_data['final'] - ch_data['computed'])
-                im = axes[4].imshow(error, cmap='hot')
-                axes[4].set_title('|I_final - I_computed|')
-                axes[4].axis('off')
-                plt.colorbar(im, ax=axes[4])
+            axes[0, 1].imshow(I_final)
+            axes[0, 1].set_title('I_final')
+            axes[0, 1].axis('off')
             
-            plt.tight_layout()
-            plt.show()
+            # Show convection result at T/2
+            I_conv_half = np.stack([
+                self.channel_results['r']['convection_half'],
+                self.channel_results['g']['convection_half'],
+                self.channel_results['b']['convection_half']
+            ], axis=2)
+            axes[0, 2].imshow(I_conv_half)
+            axes[0, 2].set_title('I_convection(T/2)')
+            axes[0, 2].axis('off')
             
-            # Print final statistics
-            print("\nFinal Results (Split Method):")
-            if len(I_initial.shape) == 3:
-                for ch in ['r', 'g', 'b']:
-                    ch_data = self.channel_results[ch]
-                    params = self.parameters[ch]
-                    ch_error = np.abs(ch_data['final'] - ch_data['computed'])
-                    mse = np.mean((ch_data['final'] - ch_data['computed'])**2)
-                    
-                    print(f"\n{ch.upper()} Channel:")
-                    print(f"  Convection: I_t + u*I_x + v*I_y = 0, 0 < t < {self.T/2}")
-                    print(f"  Source: I_t = {np.mean(params['c']):.4f} + {np.mean(params['d']):.4f}*I, {self.T/2} < t < {self.T}")
-                    print(f"  MSE: {mse:.6f}")
-                    print(f"  Max Error: {np.max(ch_error):.6f}")
-                    print(f"  Mean Error: {np.mean(ch_error):.6f}")
-            else:
-                ch_data = self.channel_results['gray']
-                params = self.parameters['gray']
-                error = np.abs(ch_data['final'] - ch_data['computed'])
+            axes[0, 3].imshow(I_computed)
+            axes[0, 3].set_title('I_computed')
+            axes[0, 3].axis('off')
+            
+            error = np.abs(I_final - I_computed)
+            axes[0, 4].imshow(error)
+            axes[0, 4].set_title('|I_final - I_computed|')
+            axes[0, 4].axis('off')
+            
+            # Channel-wise plots
+            channels = ['r', 'g', 'b']
+            channel_names = ['Red', 'Green', 'Blue']
+            
+            for i, (ch, name) in enumerate(zip(channels, channel_names)):
+                row = i + 1
+                ch_data = self.channel_results[ch]
+                
+                # Initial
+                axes[row, 0].imshow(ch_data['initial'], cmap='gray', vmin=0, vmax=1)
+                axes[row, 0].set_title(f'{name} Initial')
+                axes[row, 0].axis('off')
+                
+                # Final
+                axes[row, 1].imshow(ch_data['final'], cmap='gray', vmin=0, vmax=1)
+                axes[row, 1].set_title(f'{name} Final')
+                axes[row, 1].axis('off')
+                
+                # Convection at T/2
+                axes[row, 2].imshow(ch_data['convection_half'], cmap='gray', vmin=0, vmax=1)
+                axes[row, 2].set_title(f'{name} Convection(T/2)')
+                axes[row, 2].axis('off')
+                
+                # Computed
+                axes[row, 3].imshow(ch_data['computed'], cmap='gray', vmin=0, vmax=1)
+                axes[row, 3].set_title(f'{name} Computed')
+                axes[row, 3].axis('off')
+                
+                # Error
+                ch_error = np.abs(ch_data['final'] - ch_data['computed'])
+                im = axes[row, 4].imshow(ch_error, cmap='hot')
+                axes[row, 4].set_title(f'{name} Error')
+                axes[row, 4].axis('off')
+                plt.colorbar(im, ax=axes[row, 4])
+        
+        else:
+            # Grayscale image plotting
+            fig, axes = plt.subplots(1, 5, figsize=(20, 4))
+            
+            ch_data = self.channel_results['gray']
+            
+            axes[0].imshow(ch_data['initial'], cmap='gray', vmin=0, vmax=1)
+            axes[0].set_title('I_initial')
+            axes[0].axis('off')
+            
+            axes[1].imshow(ch_data['final'], cmap='gray', vmin=0, vmax=1)
+            axes[1].set_title('I_final')
+            axes[1].axis('off')
+            
+            axes[2].imshow(ch_data['convection_half'], cmap='gray', vmin=0, vmax=1)
+            axes[2].set_title('I_convection(T/2)')
+            axes[2].axis('off')
+            
+            axes[3].imshow(ch_data['computed'], cmap='gray', vmin=0, vmax=1)
+            axes[3].set_title('I_computed')
+            axes[3].axis('off')
+            
+            error = np.abs(ch_data['final'] - ch_data['computed'])
+            im = axes[4].imshow(error, cmap='hot')
+            axes[4].set_title('|I_final - I_computed|')
+            axes[4].axis('off')
+            plt.colorbar(im, ax=axes[4])
+        
+        plt.tight_layout()
+        plt.show()
+        
+        # Print final statistics
+        print("\nFinal Results (Split Method):")
+        if len(I_initial.shape) == 3:
+            for ch in ['r', 'g', 'b']:
+                ch_data = self.channel_results[ch]
+                params = self.parameters[ch]
+                ch_error = np.abs(ch_data['final'] - ch_data['computed'])
                 mse = np.mean((ch_data['final'] - ch_data['computed'])**2)
                 
-                print(f"\nGrayscale Channel:")
+                print(f"\n{ch.upper()} Channel:")
                 print(f"  Convection: I_t + u*I_x + v*I_y = 0, 0 < t < {self.T/2}")
                 print(f"  Source: I_t = {np.mean(params['c']):.4f} + {np.mean(params['d']):.4f}*I, {self.T/2} < t < {self.T}")
                 print(f"  MSE: {mse:.6f}")
-                print(f"  Max Error: {np.max(error):.6f}")
-                print(f"  Mean Error: {np.mean(error):.6f}")
+                print(f"  Max Error: {np.max(ch_error):.6f}")
+                print(f"  Mean Error: {np.mean(ch_error):.6f}")
+        else:
+            ch_data = self.channel_results['gray']
+            params = self.parameters['gray']
+            error = np.abs(ch_data['final'] - ch_data['computed'])
+            mse = np.mean((ch_data['final'] - ch_data['computed'])**2)
+            
+            print(f"\nGrayscale Channel:")
+            print(f"  Convection: I_t + u*I_x + v*I_y = 0, 0 < t < {self.T/2}")
+            print(f"  Source: I_t = {np.mean(params['c']):.4f} + {np.mean(params['d']):.4f}*I, {self.T/2} < t < {self.T}")
+            print(f"  MSE: {mse:.6f}")
+            print(f"  Max Error: {np.max(error):.6f}")
+            print(f"  Mean Error: {np.mean(error):.6f}")
+
+
+# MOVED OUTSIDE THE CLASS - These are standalone functions
+def create_test_images():
+    """Create test images for demonstration"""
+    # Create a simple moving pattern with color
+    h, w = 64, 64
+    x, y = np.meshgrid(np.arange(w), np.arange(h))
     
-    def create_test_images():
-        """Create test images for demonstration"""
-        # Create a simple moving pattern with color
-        h, w = 64, 64
-        x, y = np.meshgrid(np.arange(w), np.arange(h))
-        
-        # Create RGB initial image
-        I_initial = np.zeros((h, w, 3))
-        
-        # Red channel - circle
-        I_initial[:, :, 0] = np.exp(-((x-20)**2 + (y-20)**2)/100)
-        
-        # Green channel - different pattern
-        I_initial[:, :, 1] = np.exp(-((x-25)**2 + (y-25)**2)/80)
-        
-        # Blue channel - another pattern
-        I_initial[:, :, 2] = np.exp(-((x-30)**2 + (y-15)**2)/120)
-        
-        # Create RGB final image - moved and brightness changed
-        I_final = np.zeros((h, w, 3))
-        
-        # Red channel - moved circle with brightness change
-        I_final[:, :, 0] = 0.8 * np.exp(-((x-30)**2 + (y-25)**2)/100) + 0.1
-        
-        # Green channel - moved with different brightness change
-        I_final[:, :, 1] = 0.9 * np.exp(-((x-35)**2 + (y-30)**2)/80) + 0.05
-        
-        # Blue channel - moved with brightness change
-        I_final[:, :, 2] = 0.7 * np.exp(-((x-40)**2 + (y-20)**2)/120) + 0.15
-        
-        return I_initial, I_final
+    # Create RGB initial image
+    I_initial = np.zeros((h, w, 3))
     
-    def main():
-        """Main function with split algorithm implementation"""
-        try:
-            print("=== Optical Flow with Split Convection-Source Method ===")
-            print("Following split algorithm instructions...\n")
-            
-            # Create test images
-            I_initial, I_final = create_test_images()
-            
-            # Create solver with split approach
-            solver = OpticalFlowSolver(T=1.0, max_iter=10)
-            
-            # Solve following split algorithm steps
-            I_computed = solver.solve(I_initial, I_final, p=8)
-            
-            # Plot results
-            # Plot results as specified
-            solver.plot_results(I_initial, I_final, I_computed)
-            
-            print("\n=== Algorithm completed successfully! ===")
-            
-        except Exception as e:
-            print(f"Error in main function: {e}")
-            import traceback
-            traceback.print_exc()
+    # Red channel - circle
+    I_initial[:, :, 0] = np.exp(-((x-20)**2 + (y-20)**2)/100)
+    
+    # Green channel - different pattern
+    I_initial[:, :, 1] = np.exp(-((x-25)**2 + (y-25)**2)/80)
+    
+    # Blue channel - another pattern
+    I_initial[:, :, 2] = np.exp(-((x-30)**2 + (y-15)**2)/120)
+    
+    # Create RGB final image - moved and brightness changed
+    I_final = np.zeros((h, w, 3))
+    
+    # Red channel - moved circle with brightness change
+    I_final[:, :, 0] = 0.8 * np.exp(-((x-30)**2 + (y-25)**2)/100) + 0.1
+    
+    # Green channel - moved with different brightness change
+    I_final[:, :, 1] = 0.9 * np.exp(-((x-35)**2 + (y-30)**2)/80) + 0.05
+    
+    # Blue channel - moved with brightness change
+    I_final[:, :, 2] = 0.7 * np.exp(-((x-40)**2 + (y-20)**2)/120) + 0.15
+    
+    return I_initial, I_final
+
+
+def main():
+    """Main function with split algorithm implementation"""
+    try:
+        print("=== Optical Flow with Split Convection-Source Method ===")
+        print("Following split algorithm instructions...\n")
+        
+        # Create test images
+        I_initial, I_final = create_test_images()
+        
+        # Create solver with split approach
+        solver = OpticalFlowSolver(T=1.0, max_iter=10)
+        
+        # Solve following split algorithm steps
+        I_computed = solver.solve(I_initial, I_final, p=8)
+        
+        # Plot results
+        solver.plot_results(I_initial, I_final, I_computed)
+        
+        print("\n=== Algorithm completed successfully! ===")
+        
+    except Exception as e:
+        print(f"Error in main function: {e}")
+        import traceback
+        traceback.print_exc()
+
 
 if __name__ == "__main__":
     main()
